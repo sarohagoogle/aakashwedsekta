@@ -647,15 +647,40 @@ body.welcome-revealing .hero-inner{animation:heroAfterNamaste 1.7s ease-out both
     couplePhoto: ''
   };
 
-  // URL examples:
-  // ?guest=Rajesh%20Sharma&family=1&baraat=1&special=baraat&photo=photos%2Frajesh.jpg
-  // ?guest=Anjali&family=0&baraat=0&special=lagan
-  // ?builder=1  (private convenience mode to generate all the guest links)
+  // Shareable guest links are generated as ?i=<encoded-payload>.
+  // Legacy readable guest/family/baraat parameters are still accepted for compatibility.
 
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(window.location.search);
-  const param = (key) => (params.get(key) || '').trim();
-  const flag = (key, fallback) => !params.has(key) ? fallback : !['false','0','no','off'].includes(param(key).toLowerCase());
+
+  // Shareable invitations use one compact Base64URL payload (?i=...) so guest details
+  // are not exposed as readable query-string fields. Legacy plain parameters remain
+  // supported so older links continue to work. This is URL obfuscation, not encryption.
+  function encodeInvitePayload(data){
+    const json=JSON.stringify(data);
+    const bytes=new TextEncoder().encode(json);
+    let binary='';
+    bytes.forEach(b=>binary+=String.fromCharCode(b));
+    return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function decodeInvitePayload(value){
+    if(!value)return {};
+    try{
+      let base=value.replace(/-/g,'+').replace(/_/g,'/');
+      base+='='.repeat((4-base.length%4)%4);
+      const binary=atob(base);
+      const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+      const parsed=JSON.parse(new TextDecoder().decode(bytes));
+      return parsed && typeof parsed==='object' && !Array.isArray(parsed) ? parsed : {};
+    }catch{return {}}
+  }
+  const packedInvite=decodeInvitePayload((params.get('i')||'').trim());
+  const hasPacked=(key)=>Object.prototype.hasOwnProperty.call(packedInvite,key);
+  const param=(key)=>String(hasPacked(key)?(packedInvite[key]??''):(params.get(key)||'')).trim();
+  const flag=(key,fallback)=>{
+    const present=hasPacked(key)||params.has(key);
+    return !present ? fallback : !['false','0','no','off'].includes(param(key).toLowerCase());
+  };
   const hasFamily = flag('family', true);
   const includeBaraat = hasFamily && flag('baraat', true); // family=0 always suppresses Baraat, even if baraat=1.
   const weddingDateInIndia = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
@@ -986,12 +1011,15 @@ body.welcome-revealing .hero-inner{animation:heroAfterNamaste 1.7s ease-out both
       for(const opt of special.options)if(['gathering','baraat','arrival','day2'].includes(opt.value))opt.disabled=!(family&&b.checked);
       if(special.selectedOptions[0]?.disabled)special.value='';
       const u=new URL(window.location.href);u.search='';u.hash='';
-      if(g.value.trim())u.searchParams.set('guest',g.value.trim());
-      u.searchParams.set('family',family?'1':'0');
-      if(family&&familyName.value.trim())u.searchParams.set('familyName',familyName.value.trim());
-      u.searchParams.set('baraat',family&&b.checked?'1':'0');
-      if(special.value)u.searchParams.set('special',special.value);
-      if(photo.value.trim())u.searchParams.set('photo',photo.value.trim());
+      const payload={
+        family:family?'1':'0',
+        baraat:family&&b.checked?'1':'0'
+      };
+      if(g.value.trim())payload.guest=g.value.trim();
+      if(family&&familyName.value.trim())payload.familyName=familyName.value.trim();
+      if(special.value)payload.special=special.value;
+      if(photo.value.trim())payload.photo=photo.value.trim();
+      u.searchParams.set('i',encodeInvitePayload(payload));
       out.value=u.href;$('adminPreview').href=u.href;
     };
     [g,f,familyName,b,special,photo].forEach(x=>{x.addEventListener('input',update);x.addEventListener('change',update)});
