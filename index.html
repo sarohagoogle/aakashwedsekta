@@ -455,6 +455,13 @@ body.welcome-revealing .hero-inner{animation:heroAfterNamaste 1.7s ease-out both
 .closing-family-note{font-family:'Dancing Script',cursive;font-size:clamp(23px,4vw,32px);color:#f8deaa;margin:16px auto 4px}
 @media(max-width:600px){.palace-door::before{inset:12% 8%}.palace-door-inlay{font-size:12px;letter-spacing:.1em}.palace-door-carving{font-size:70px}.welcome-envelope.royal-paper{max-width:390px}.hero-rose{opacity:.3}.intro .wrap:after{right:-18px;top:-40px;width:100px}.royal-timeline{padding-left:16px!important}.royal-timeline::before{left:13px}.royal-timeline .event::before{left:-24px}.heritage-blessing{padding:55px 16px}.closing-flowers{opacity:.37}}
 @media(prefers-reduced-motion:reduce){.palace-door,.palace-flowers,.hero-rose,.heritage-day-art,.royal-timeline::before,.royal-timeline .event::before,.heritage-diya,.heritage-aura,.details-section::before,.details-section::after{animation:none!important;transition:none!important}.welcome-cover.opening .palace-door{transform:none!important}.day-card .royal-timeline::before{transform:scaleY(1)}}
+
+/* TEMPORARY ENGLISH-ONLY MODE: keep bilingual logic in code, hide language control. */
+#langSwitch { display: none !important; }
+
+/* Name casing safeguard */
+#partnerOne, #footerCouple { text-transform: none !important; }
+#partnerOne::first-letter { text-transform: uppercase !important; }
 </style>
 </head>
 <body>
@@ -832,7 +839,7 @@ body.welcome-revealing .hero-inner{animation:heroAfterNamaste 1.7s ease-out both
   const enText=new WeakMap();
   document.querySelectorAll('[data-hi]').forEach(el=>{enText.set(el,el.innerHTML);});
   function nameAddress(hi,forEnvelope=false){
-    if(!hasGuestName)return hi?'सप्रेम विवाह निमंत्रण':'A Wedding Invitation';
+    if(!hasGuestName)return hi?'सप्रेम विवाह निमंत्रण':'Wedding Invitation';
     const prefix=hi?'आदरणीय ':'Dear ';
     const fam=hasFamily?(hi?' एवं परिवार':(forEnvelope?' & Family':' '+familyName)):'';
     return prefix+guestName+fam+(forEnvelope?'':hi?'':',');
